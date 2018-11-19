@@ -1,0 +1,17 @@
+net "rst" LOC = "P57";
+
+net "seg_com[3]" LOC = "P18";
+net "seg_com[2]" LOC = "P19";
+net "seg_com[1]" LOC = "P20";
+net "seg_com[0]" LOC = "P21";
+
+net "seg_data[7]" LOC = "P22";
+net "seg_data[6]" LOC = "P24";
+net "seg_data[5]" LOC = "P26";
+net "seg_data[4]" LOC = "P27";
+net "seg_data[3]" LOC = "P28";
+net "seg_data[2]" LOC = "P29";
+net "seg_data[1]" LOC = "P31";
+net "seg_data[0]" LOC = "P33";
+
+net "clk" LOC = "P76";
