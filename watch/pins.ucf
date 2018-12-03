@@ -1,17 +1,32 @@
 net "rst" LOC = "P57";
-
-net "seg_com[3]" LOC = "P18";
-net "seg_com[2]" LOC = "P19";
-net "seg_com[1]" LOC = "P20";
-net "seg_com[0]" LOC = "P21";
-
-net "seg_data[7]" LOC = "P22";
-net "seg_data[6]" LOC = "P24";
-net "seg_data[5]" LOC = "P26";
-net "seg_data[4]" LOC = "P27";
-net "seg_data[3]" LOC = "P28";
-net "seg_data[2]" LOC = "P29";
-net "seg_data[1]" LOC = "P31";
-net "seg_data[0]" LOC = "P33";
-
 net "clk" LOC = "P76";
+
+net "lcd_rs" LOC = "P156";
+net "lcd_rw" LOC = "P155";
+net "lcd_e" LOC = "P154";
+net "lcd_data[7]" LOC = "P143";
+net "lcd_data[6]" LOC = "P144";
+net "lcd_data[5]" LOC = "P146";
+net "lcd_data[4]" LOC = "P147";
+net "lcd_data[3]" LOC = "P148";
+net "lcd_data[2]" LOC = "P149";
+net "lcd_data[1]" LOC = "P150";
+net "lcd_data[0]" LOC = "P152";
+
+net "buttons[0]" LOC = "P63";
+net "buttons[1]" LOC = "P67";
+net "buttons[2]" LOC = "P65";
+net "buttons[3]" LOC = "P71";
+net "buttons[4]" LOC = "P68";
+net "buttons[5]" LOC = "P74";
+net "buttons[6]" LOC = "P50";
+net "buttons[7]" LOC = "P58";
+
+net "switches[7]" LOC = "P34";
+net "switches[6]" LOC = "P35";
+net "switches[5]" LOC = "P37";
+net "switches[4]" LOC = "P36";
+net "switches[3]" LOC = "P40";
+net "switches[2]" LOC = "P39";
+net "switches[1]" LOC = "P43";
+net "switches[0]" LOC = "P42";
