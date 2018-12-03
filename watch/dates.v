@@ -7,7 +7,26 @@ module dates(rst, clk, day, month, year, day_of_week);
 	output [6:0] day, month, day_of_week;
 	reg [14:0] year;
 	reg [6:0] day, month, day_of_week;
+	reg [22:0] total_days;
+	reg is_leap_year;
+	integer index;
+	integer days_of_month [11:0];
 	
+	initial begin
+		days_of_month[0] = 31;
+		days_of_month[1] = 28;
+		days_of_month[2] = 31;
+		days_of_month[3] = 30;
+		days_of_month[4] = 31;
+		days_of_month[5] = 30;
+		days_of_month[6] = 31;
+		days_of_month[7] = 31;
+		days_of_month[8] = 30;
+		days_of_month[9] = 31;
+		days_of_month[10] = 30;
+		days_of_month[11] = 31;
+	end
+
 	always @(posedge clk or negedge rst) begin
 		// 클럭에 맞추어 날 바꿔줌
 		if (~rst) day = 1;
@@ -22,7 +41,10 @@ module dates(rst, clk, day, month, year, day_of_week);
 						month == 12) &&
 						day == 31) ||
 					((month == 2) &&
-						day == 28) ||
+						(
+							(day == 28 && !is_leap_year)||
+							(day == 29)
+						)) ||
 					((month == 4 ||
 						month == 6 ||
 						month == 9 ||
@@ -91,8 +113,19 @@ module dates(rst, clk, day, month, year, day_of_week);
 		// 클럭에 맞추어 요일 바꿔줌
 		if (~rst) day_of_week = 0;
 		else begin
-			day_of_week = 0;
+			total_days = 365 * (year - 1) + (year / 4 - year / 100 + year / 400);
+			for (index = 0;index < month;index = index + 1) 
+				total_days = total_days + days_of_month[index];
+
+			if (is_leap_year && month > 2) total_days = total_days + 1;
+			total_days = total_days + day;
+
+			day_of_week = total_days % 7;
 		end
+	end
+
+	always @(posedge clk) begin
+		is_leap_year = (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));
 	end
 
 endmodule
