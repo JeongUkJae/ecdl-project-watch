@@ -13,6 +13,7 @@ module ten_clk(rst, clk, output_clk);
 		else begin
 			if (cnt == 9) begin
 				output_clk = ~output_clk;
+				cnt = 0;
 			end
 			else begin
 				cnt = cnt + 1;
