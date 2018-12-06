@@ -9,7 +9,8 @@ module dates(rst, clk, clk1000,
 	reg f_y, f_mo, f_d;
 	reg df_y, df_mo, df_d;
 	
-	reg flag1,flag2,flag3,flag4;
+	reg flag1, flag2, flag3, flag4;
+	integer step;
 	
 	// �일
 	output [14:0] year;
@@ -19,49 +20,62 @@ module dates(rst, clk, clk1000,
 	reg is_leap_year;
 
 	wire [3:0] y1000, y100, y10, y1;
+	
+	always @(posedge clk1000 or negedge rst) begin
+		if (~rst) begin
+			flag1 = 0;
+			df_d = 0;
+			f_d = 0;
+		end else begin
+			if (i_d) f_d = 1;
+			else if (f_d) begin
+				f_d = 0;
+				step = 1;
+				flag1 = 1;
+			end
+			else if (d_d) df_d = 1;
+			else if (df_d) begin
+				df_d = 0;
+				step = -1;
+				flag1 = 1;
+			end else begin
+				flag1 = 0;
+			end
+		end
+	end
 
-	always @(posedge clk or negedge rst or posedge clk1000) begin
+	always @(posedge clk or negedge rst or posedge flag1) begin
 		// �럭맞추바꿔�
 		if (~rst)  begin
 			day = 5;
-			f_d = 0;
-			df_d = 0;
-			flag1 = 0;
 		end
 		else begin
 			if (clk) begin
-				if (flag1 == 0) begin
-					flag1 = 1;
-					if (
-							((month == 1 ||
-								month == 3 ||
-								month == 5 ||
-								month == 7 ||
-								month == 8 ||
-								month == 10 ||
-								month == 12) &&
-								day == 31) ||
-							((month == 2) &&
-								(
-									(day == 28 && !is_leap_year)||
-									(day == 29)
-								)) ||
-							((month == 4 ||
-								month == 6 ||
-								month == 9 ||
-								month == 11) &&
-								day == 30)
-						)
-						day = 1;
-					else day = day + 1;
-				end
+				if (
+						((month == 1 ||
+							month == 3 ||
+							month == 5 ||
+							month == 7 ||
+							month == 8 ||
+							month == 10 ||
+							month == 12) &&
+							day == 31) ||
+						((month == 2) &&
+							(
+								(day == 28 && !is_leap_year)||
+								(day == 29)
+							)) ||
+						((month == 4 ||
+							month == 6 ||
+							month == 9 ||
+							month == 11) &&
+							day == 30)
+					)
+					day = 1;
+				else day = day + 1;
 			end
 			else begin
-				flag1 = 0;
-
-				if (i_d) f_d = 1;
-				else if (f_d) begin
-					f_d = 0;
+				if (step == 1) begin
 					if (
 							((month == 1 ||
 								month == 3 ||
@@ -85,11 +99,7 @@ module dates(rst, clk, clk1000,
 						day = 1;
 					else day = day + 1;
 				end
-				
-				if (d_d) df_d = 1;
-				else if (df_d) begin
-					df_d = 0;
-					
+				else begin
 					if ((month == 1 ||
 								month == 3 ||
 								month == 5 ||

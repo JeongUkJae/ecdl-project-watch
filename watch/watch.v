@@ -13,21 +13,47 @@ module watch(rst, clk, buttons, switches, leds, lcd_rs, lcd_rw, lcd_e, lcd_data)
 	reg i_a, i_h, i_m, i_s; // am/pm Î∂Ï¥Ï¶ùÍ ¥Îü≠
 	reg d_h, d_m, d_s; // am/pm Î∂Ï¥Í∞êÏÜå ¥Îü≠
 	
-	wire clk_day;
-	
 	// alarm
 	wire a_ap;
 	wire [6:0] a_hour, a_min;
 	wire [3:0] a_h10, a_h1, a_m10, a_m1;
-	reg a_off;
 	reg a_i_a, a_i_h, a_i_m, a_d_h, a_d_m;
 	
 	// îÏùº
+	wire is_leap_year;
 	wire [14:0] year;
 	wire [6:0] month, day;
 	wire [3:0] y1000, y100, y10, y1, mo10, mo1, d10, d1;
 	reg i_y, i_mo, i_d; // am/pm Î∂Ï¥Ï¶ùÍ ¥Îü≠
 	reg d_y, d_mo, d_d; // am/pm Î∂Ï¥Í∞êÏÜå ¥Îü≠
+
+	// stop watch
+	wire [6:0] stop_watch_min, stop_watch_sec;
+	wire [9:0] stop_watch_msec;
+	wire [3:0] stop_watch_m10, stop_watch_m1, stop_watch_s10, stop_watch_s1,
+					stop_watch_ms1000, stop_watch_ms100, stop_watch_ms10, stop_watch_ms1;
+	reg stop_watch_zero, stop_watch_enable;
+	reg stop_watch_enable_flag;
+	
+	// timer
+	reg timer_im, timer_is, timer_dm, timer_ds;
+	wire [6:0] timer_min, timer_sec;
+	wire [9:0] timer_msec;
+	wire [3:0] timer_m10, timer_m1, timer_s10, timer_s1,
+					timer_ms1000, timer_ms100, timer_ms10, timer_ms1;
+	reg timer_zero, timer_enable, timer_enable_flag;
+	wire timer_end_sig;
+
+	// world time
+	wire [47:0] world_time_name;
+	wire [6:0] world_time_diff;
+	reg world_time_change;
+	reg [14:0] wt_year;
+	wire [3:0] wy1000, wy100, wy10, wy1, wmo10, wmo1, wd10, wd1;
+	wire [3:0] wh10, wh1;
+	reg [6:0] wt_month, wt_day;
+	reg wt_ap;
+	reg [6:0] wt_hour;
 
 	// vfd display
 	output lcd_rs, lcd_rw, lcd_e;
@@ -52,7 +78,10 @@ module watch(rst, clk, buttons, switches, leds, lcd_rs, lcd_rw, lcd_e, lcd_data)
 	parameter mode_display = 3'b000,
 			 mode_edit_time = 3'b001,
 			 mode_edit_date = 3'b010,
-			 mode_alarm = 3'b011;
+			 mode_alarm = 3'b011,
+			 mode_stop_watch = 3'b100,
+			 mode_timer = 3'b101,
+			 mode_world_time = 3'b110;
 
 	always @(posedge clk or negedge rst) begin
 		if (~rst) begin
@@ -62,7 +91,203 @@ module watch(rst, clk, buttons, switches, leds, lcd_rs, lcd_rw, lcd_e, lcd_data)
 			if (switches[0]) mode = mode_edit_time;
 			else if (switches[1]) mode = mode_edit_date;
 			else if (switches[2]) mode = mode_alarm;
+			else if (switches[3]) mode = mode_stop_watch;
+			else if (switches[4]) mode = mode_timer;
+			else if (switches[5]) mode = mode_world_time;
 			else mode = mode_display;
+		end
+	end
+	
+	always @(world_time_diff, hour, ap, day, month, year) begin
+		if (world_time_diff < 0) begin
+			if (hour - world_time_diff < 0) begin
+				if (hour - world_time_diff < -12) begin
+					wt_hour = hour - world_time_diff + 24;
+					wt_ap = ap;
+					
+					if (day == 1) begin
+						if (month == 1 ||
+							month == 3 ||
+							month == 5 ||
+							month == 7 ||
+							month == 8 ||
+							month == 10 ||
+							month == 12) begin
+							wt_day = 31;
+							
+							if (month == 1) begin
+								wt_month = 12;
+								wt_year = year - 1;
+							end else begin
+								wt_month = month - 1;
+								wt_year = year;
+							end
+						end
+						else if ((month == 2) &&
+									(day == 1)) begin
+							if (is_leap_year) wt_day = 29;
+							else wt_day = 28;
+							
+							if (month == 1) begin
+								wt_month = 12;
+								wt_year = year - 1;
+							end else begin
+								wt_month = month - 1;
+								wt_year = year;
+							end
+						end 
+						else if ((month == 4 ||
+									month == 6 ||
+									month == 9 ||
+									month == 11) &&
+									day == 1) begin
+							wt_day = 30;
+
+							if (month == 1) begin
+								wt_month = 12;
+								wt_year = year - 1;
+							end else begin
+								wt_month = month - 1;
+								wt_year = year;
+							end
+						end
+					end
+					else begin
+						wt_month = month;
+						wt_year = year;
+						wt_day = day - 1;
+					end
+				end else begin
+					wt_hour = hour - world_time_diff + 12;
+					wt_ap = ~ap;
+					
+					if (ap == 0) begin
+						if (day == 1) begin
+							if (month == 1 ||
+								month == 3 ||
+								month == 5 ||
+								month == 7 ||
+								month == 8 ||
+								month == 10 ||
+								month == 12) begin
+								wt_day = 31;
+								
+								if (month == 1) begin
+									wt_month = 12;
+									wt_year = year - 1;
+								end else begin
+									wt_month = month - 1;
+									wt_year = year;
+								end
+							end
+							else if ((month == 2) &&
+										(day == 1)) begin
+								if (is_leap_year) wt_day = 29;
+								else wt_day = 28;
+								
+								if (month == 1) begin
+									wt_month = 12;
+									wt_year = year - 1;
+								end else begin
+									wt_month = month - 1;
+									wt_year = year;
+								end
+							end 
+							else if ((month == 4 ||
+										month == 6 ||
+										month == 9 ||
+										month == 11) &&
+										day == 1) begin
+								wt_day = 30;
+
+								if (month == 1) begin
+									wt_month = 12;
+									wt_year = year - 1;
+								end else begin
+									wt_month = month - 1;
+									wt_year = year;
+								end
+							end
+						end
+						else begin
+							wt_month = month;
+							wt_year = year;
+							wt_day = day - 1;
+						end
+					end else begin
+						wt_day = day;
+						wt_month = month;
+						wt_year = year;
+					end
+				end
+			end else begin
+				wt_hour = hour - world_time_diff;
+				wt_ap = ap;
+				wt_day = day;
+				wt_month = month;
+				wt_year = year;
+			end
+		end else begin
+			if (hour + world_time_diff >= 12) begin
+				wt_hour = hour + world_time_diff - 12;
+				
+				wt_ap = ~ap;
+				if (ap == 1) begin
+					if (
+							(
+								(
+									month == 1 ||
+									month == 3 ||
+									month == 5 ||
+									month == 7 ||
+									month == 8 ||
+									month == 10 ||
+									month == 12
+								) &&
+								day == 31
+							) ||
+							(
+								month == 2 &&
+								(
+									(is_leap_year && day == 29) ||
+									(~is_leap_year && day == 28)
+								)
+							) ||
+							(
+								(
+									month == 4 ||
+									month == 6 ||
+									month == 9 ||
+									month == 11
+								) &&
+								day == 30
+							)
+						) begin
+						wt_day = 1;
+						if (month == 12) begin
+							wt_year = year + 1;
+							wt_month = 1;
+						end else begin
+							wt_year = year;
+							wt_month = month + 1;
+						end
+					end else begin
+						wt_year = year;
+						wt_month = month;
+						wt_day = day + 1;
+					end
+				end else begin
+					wt_year = year;
+					wt_month = month;
+					wt_day = day;
+				end 
+			end else begin
+				wt_hour = hour + world_time_diff;
+				wt_ap = ap;
+				wt_day = day;
+				wt_month = month;
+				wt_year = year;
+			end
 		end
 	end
 
@@ -147,6 +372,79 @@ module watch(rst, clk, buttons, switches, leds, lcd_rs, lcd_rw, lcd_e, lcd_data)
 					line2_data[56 +: 8] = 8'b01010000;
 				else // A
 					line2_data[56 +: 8] = 8'b01000001;
+			end else if (mode == mode_stop_watch) begin
+				line1_data[40 +: 80] = {
+					8'h68,
+					8'h63,
+					8'h74,
+					8'h61,
+					8'h57,
+					8'h20,
+					8'h70,
+					8'h6f,
+					8'h74,
+					8'h53
+				};
+				line2_data[48 +: 72] = {
+					{4'b0011, stop_watch_ms1},
+					{4'b0011, stop_watch_ms10},
+					{4'b0011, stop_watch_ms100},
+					8'b00111010,
+					{4'b0011, stop_watch_s1},
+					{4'b0011, stop_watch_s10},
+					8'b00111010,
+					{4'b0011, stop_watch_m1},
+					{4'b0011, stop_watch_m10}
+				};
+			end else if (mode == mode_timer) begin
+				line1_data[80 +: 40] = {
+					8'h72,
+					8'h65,
+					8'h6D,
+					8'h69,
+					8'h54
+				};
+				line2_data[48 +: 72] = {
+					{4'b0011, timer_ms1},
+					{4'b0011, timer_ms10},
+					{4'b0011, timer_ms100},
+					8'b00111010,
+					{4'b0011, timer_s1},
+					{4'b0011, timer_s10},
+					8'b00111010,
+					{4'b0011, timer_m1},
+					{4'b0011, timer_m10}
+				};
+			end else if (mode == mode_world_time) begin
+				line1_data[0 +: 48] = {world_time_name};
+				line1_data[56 +: 64] = {
+					{4'b0011, wd1},
+					{4'b0011, wd10},
+					8'b00101110,
+					{4'b0011, wmo1},
+					{4'b0011, wmo10},
+					8'b00101110,
+					{4'b0011, wy1},
+					{4'b0011, wy10}
+				};
+
+				// Î∂Ï¥òÌ¥Í∏∞
+				line2_data[40 +: 80] = {
+						{4'b0011, s1},
+						{4'b0011, s10},
+						8'b00111010,
+						{4'b0011, m1},
+						{4'b0011, m10},
+						8'b00111010,
+						{4'b0011, wh1},
+						{4'b0011, wh10},
+						8'b00100000,
+						8'b01001101 // M
+					};
+				if (wt_ap) // P
+					line2_data[32 +: 8] = 8'b01010000;
+				else // A
+					line2_data[32 +: 8] = 8'b01000001;
 			end
 		end
 	end
@@ -156,6 +454,12 @@ module watch(rst, clk, buttons, switches, leds, lcd_rs, lcd_rw, lcd_e, lcd_data)
 			{	i_a, i_h, i_m, i_s, d_h, d_m, d_s,
 				i_y, i_mo, i_d, d_y, d_mo, d_d} = 13'b0;
 			{a_i_a, a_i_h, a_i_m, a_d_h, a_d_m} = 5'b0;
+			{stop_watch_zero, stop_watch_enable} = 2'b0;
+			stop_watch_enable_flag = 0;
+			{timer_zero, timer_enable} = 2'b0;
+			timer_enable_flag = 0;
+			{ timer_im, timer_dm, timer_is, timer_ds } = 4'b0;
+			world_time_change = 0;
 		end
 		else begin
 			if (mode == mode_edit_time) begin
@@ -187,29 +491,66 @@ module watch(rst, clk, buttons, switches, leds, lcd_rs, lcd_rw, lcd_e, lcd_data)
 				else begin	
 					{a_i_a, a_i_h, a_i_m, a_d_h, a_d_m} = 5'b0;
 				end
-			end else begin	
+			end else if (mode == mode_stop_watch) begin
+				if (buttons[0]) begin
+					if (~stop_watch_enable_flag) begin
+						stop_watch_enable_flag = 1;
+						stop_watch_enable = ~stop_watch_enable;
+					end
+				end
+				else if (buttons[1]) stop_watch_zero = 1;
+				else begin
+					stop_watch_zero = 0;
+					stop_watch_enable_flag = 0;
+				end
+			end else if (mode == mode_timer) begin
+				if (buttons[0]) begin
+					if (~timer_enable_flag) begin
+						timer_enable_flag = 1;
+						timer_enable = ~timer_enable;
+					end
+				end
+				else if (buttons[1]) begin
+					timer_zero = 1;
+					timer_enable = 0;
+					timer_enable_flag = 0;
+				end
+				else if (buttons[4]) timer_im = 1;
+				else if (buttons[5]) timer_dm = 1;
+				else if (buttons[6]) timer_is = 1;
+				else if (buttons[7])	timer_ds = 1;
+				else begin
+					timer_zero = 0;
+					timer_enable_flag = 0;
+					{ timer_im, timer_dm, timer_is, timer_ds } = 4'b0;
+				end
+			end else if (mode == mode_world_time) begin
+				world_time_change = buttons[0];
+			end else begin
 				{	i_a, i_h, i_m, i_s, d_h, d_m, d_s,
 					i_y, i_mo, i_d, d_y, d_mo, d_d} = 13'b0;
 				{a_i_a, a_i_h, a_i_m, a_d_h, a_d_m} = 5'b0;
+				{stop_watch_zero, stop_watch_enable} = 2'b0;
+				stop_watch_enable_flag = 0;
+				{timer_zero, timer_enable} = 2'b0;
+				timer_enable_flag = 0;
+				{ timer_im, timer_dm, timer_is, timer_ds } = 4'b0;
+				world_time_change = 0;
 			end
 		end
 	end
 	
 	// Îß¥Îü≠ÎßàÎã§ úÍ∞Ñ Î∞õÏïÑ§Í∏∞
-	times hms(rst, clk,
-					ap, hour, min, sec,
-					i_a, i_h, i_m, i_s,
-					d_h, d_m, d_s,
-					clk_day);
+	datetimes dates_and_times(rst, clk,
+					is_leap_year, year, month, day, ap, hour, min, sec,
+					i_y, i_mo, i_d, i_a, i_h, i_m, i_s,
+					d_y, d_mo, d_d, d_h, d_m, d_s);
 
 	// Î∂Ï¥10/1 òÎàÑÍ∏
 	sep s_sep(sec, s10, s1);
 	sep m_sep(min, m10, m1);
 	sep h_sep(hour, h10, h1);
-	
-	dates date_g(rst, clk_day, clk, day, month, year,
-						i_y, i_mo, i_d,
-						d_y, d_mo, d_d);
+
 	sep d_sep(day, d10, d1);
 	sep mo_se(month, mo10, mo1);
 	sep4 y_sep(year, y1000, y100, y10, y1);
@@ -222,14 +563,33 @@ module watch(rst, clk, buttons, switches, leds, lcd_rs, lcd_rw, lcd_e, lcd_data)
 					a_ap, a_hour, a_min,
 					a_i_a, a_i_h, a_i_m,
 					a_d_h, a_d_m);
-	alarm a(rst, clk, a_off,
+	alarm a(rst, clk, switches[7],
 			ap, hour, min,
 			a_ap, a_hour, a_min,
 			led_activate);
 	sep a_m_sep(a_min, a_m10, a_m1);
 	sep a_h_sep(a_hour, a_h10, a_h1);
+	
+	// stop watch
+	stop_watch stop_watch1(rst, clk, stop_watch_enable, stop_watch_zero, stop_watch_min, stop_watch_sec, stop_watch_msec);
+	sep s_m_sep(stop_watch_min, stop_watch_m10, stop_watch_m1);
+	sep s_s_sep(stop_watch_sec, stop_watch_s10, stop_watch_s1);
+	sep4 s_ms_sep(stop_watch_msec, stop_watch_ms1000, stop_watch_ms100, stop_watch_ms10, stop_watch_ms1);
+
+	// timer
+	timer timer1(rst, clk, timer_min, timer_sec, timer_msec, timer_enable, timer_zero, timer_end_sig, timer_im, timer_dm, timer_is, timer_ds);
+	sep t_m_sep(timer_min, timer_m10, timer_m1);
+	sep t_s_sep(timer_sec, timer_s10, timer_s1);
+	sep4 t_ms_sep(timer_msec, timer_ms1000, timer_ms100, timer_ms10, timer_ms1);
+	
+	// world time
+	word_time wt(world_time_change, world_time_name, world_time_diff);
+	sep w_sep(wt_hour, wh10, wh1);
+	sep4 wy_sep(wt_year, wy1000, wy100, wy10, wy1);
+	sep wd_sep(wt_day, wd10, wd1);
+	sep wmo_se(wt_month, wmo10, wmo1);
 
 	// lcd, led
 	lcd_decoder lcd(rst, clk, lcd_e, lcd_rs, lcd_rw, lcd_data, line1_data, line2_data);
-	led_display led(rst, clk_100hz, leds, led_active);
+	led_display led(rst, clk_100hz, leds, led_activate || timer_end_sig);
 endmodule
