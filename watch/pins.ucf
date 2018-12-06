@@ -1,5 +1,6 @@
 net "rst" LOC = "P57";
 net "clk" LOC = "P76";
+net "clk1m" LOC = "P79";
 
 net "lcd_rs" LOC = "P156";
 net "lcd_rw" LOC = "P155";
@@ -47,3 +48,5 @@ net "leds[12]" LOC = "P203";
 net "leds[13]" LOC = "P205";
 net "leds[14]" LOC = "P13";
 net "leds[15]" LOC = "P16";
+
+net "piezo" LOC = "P51";

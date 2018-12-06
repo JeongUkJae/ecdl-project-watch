@@ -5,8 +5,8 @@ module stop_watch(rst, clk, enable, zero, min, sec, msec);
 	output [6:0] min, sec;
 	reg [6:0] min, sec;
 	
-	output [9:0] msec;
-	reg [9:0] msec;
+	output [14:0] msec;
+	reg [14:0] msec;
 	
 	always @(posedge clk) begin
 		if (~rst) msec = 0;

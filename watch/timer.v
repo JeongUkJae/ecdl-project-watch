@@ -7,9 +7,9 @@ module timer(rst, clk,
 	input im, dm, is, ds;
 	
 	output [6:0] min, sec;
-	output [9:0] msec;
+	output [14:0] msec;
 	reg [6:0] min, sec;
-	reg [9:0] msec;
+	reg [14:0] msec;
 	
 	output end_sig;
 	reg end_sig;
