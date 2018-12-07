@@ -405,5 +405,5 @@ module watch(rst, clk, clk1m,
 	// lcd, led
 	lcd_decoder lcd(rst, clk, lcd_e, lcd_rs, lcd_rw, lcd_data, line1_data, line2_data);
 	led_display led(rst, clk_100hz, leds, led_activate || timer_end_sig);
-	piezo p(rst, clk1m, piezo, switches[6]);
+	piezo p(rst, clk1m, piezo, led_activate || timer_end_sig);
 endmodule
